@@ -121,6 +121,9 @@ if(NOT DEFINED BCC_KERNEL_MODULES_DIR)
   set(BCC_KERNEL_MODULES_DIR "/lib/modules")
 endif()
 
+# fix: Cannot run cpp examples because of LLVM ERROR
+add_definitions(-DENABLE_LLVM_SHARED=ON)
+
 if(NOT DEFINED BCC_PROG_TAG_DIR)
   set(BCC_PROG_TAG_DIR "/var/tmp/bcc")
 endif()

@@ -173,3 +173,5 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libbcc.pc DESTINATION ${CMAKE_INSTALL_
 endif(ENABLE_CLANG_JIT)
 install(FILES ${bcc_common_headers} DESTINATION include/bcc)
 install(TARGETS bpf-shared LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR})
+
+add_subdirectory(tests)
