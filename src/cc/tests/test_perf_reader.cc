@@ -48,7 +48,7 @@ void dump(const void *mem, unsigned int n) {
 
 void handle_output(void *cb_cookie, void *data, int data_size) {
   // std::cout << "Hello Perf output!!" << std::endl;
-  // dump(data, data_size);
+  dump(data, data_size);
 }
 
 void handle_lost(void *cb_cookie, uint64_t lost) {
