@@ -1,0 +1,44 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.205.2/containers/ubuntu
+{
+	"name": "Ubuntu",
+	"build": {
+		"dockerfile": "../docker/Dockerfile.tests",
+		// Update 'VARIANT' to pick an Ubuntu version: hirsute, focal, bionic
+		// Use hirsute or bionic on local arm64/Apple Silicon.
+		"args": {
+			"UBUNTU_VERSION": "20.04",
+			"UBUNTU_SHORTNAME": "focal"
+		},
+	},
+	"extensions": [
+		"ms-vscode.cmake-tools",
+		"ms-vscode.cpptools",
+		"twxs.cmake",
+		"amiralizadeh9480.cpp-helper",
+		"eamodio.gitlens",
+		"albert.tabout",
+		"redhat.vscode-yaml",
+		"l13rary.l13-sh-snippets",
+		"foxundermoon.shell-format",
+		"shan.code-settings-sync",
+		"editorconfig.editorconfig",
+		"aaron-bond.better-comments"
+	],
+
+	"runArgs": [
+		"--privileged",
+		"--network=host",
+		"--pid=host",
+	],
+
+	// Set *default* container specific settings.json values on container create.
+	"settings": {},
+	"mounts": [
+		"source=/sys/kernel/debug,target=/sys/kernel/debug,type=bind,consistency=cached",
+		"source=/lib/modules,target=/lib/modules,type=bind,consistency=cached",
+	],
+	"remoteEnv": {
+		"DISPLAY": ":0",
+	}
+}
