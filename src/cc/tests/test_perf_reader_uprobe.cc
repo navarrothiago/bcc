@@ -15,16 +15,22 @@ const std::string BPF_PROGRAM = R"(
 #include <linux/sched.h>
 #include <uapi/linux/ptrace.h>
 
+BPF_PERCPU_ARRAY(counter, u64, 1);
+
 //#define FROM_STACK
 
 BPF_PERF_OUTPUT(events);
+
 #ifndef FROM_STACK
-#define MAX_OUT 2048
+// #define MAX_OUT 2048
+#define MAX_OUT 4096
 struct event_t
 {
+  u64 pid;
 	char msg[MAX_OUT];
 	u64 size;
 };
+
 BPF_PERCPU_ARRAY(events_heap, struct event_t, 1);
 #endif
 
@@ -34,6 +40,10 @@ struct buffer {
 };
 
 int do_entry(struct pt_regs *ctx) {
+u64 key = 0;
+// TODO check how to create a transaction (lookup + increment).
+// TODO How to guarantee that other core will not get the same value of the lookup.
+// TODO Spin locks? Only available in kernel v5.1.
 
 #ifdef FROM_STACK
     struct buffer buf={};
@@ -47,14 +57,30 @@ int do_entry(struct pt_regs *ctx) {
 #else
 	int entry = 0;
 	struct event_t* event = events_heap.lookup(&entry);
-    // NOTE: event must be checked even if it will always be there.
+  // NOTE: event must be checked even if it will always be there.
 	if(!event)
 	{
 		return 1;
 	}
-	event->size = sizeof(event->msg);
-	bpf_probe_read_user(&event->msg, sizeof(event->msg), (const void*)(ctx->sp));
-	events.perf_submit(ctx, event, sizeof(*event));
+	// event->size = sizeof(event->msg);
+  event->pid = bpf_get_current_pid_tgid();
+  u64 *val = counter.lookup(&key);
+
+  if(val){
+    if(*val != MAX_OUT){
+      bpf_probe_read_user(&event->msg, sizeof(event->msg)/2, (const void*)(ctx->sp));
+      counter.increment(key, 2048);
+      // bpf_trace_printk("%lu bgn counter %lu", event->pid, *val);
+    }else{
+      char* next_msg = event->msg + 2048;
+      bpf_probe_read_user(next_msg, sizeof(event->msg)/2, (const void*)(ctx->sp));
+      events.perf_submit(ctx, event, sizeof(*event));
+      *val = 0;
+      // bpf_trace_printk("%lu end counter  %lu", event->pid, *val);
+    }
+  }else{
+    return 0;
+  }
 #endif
     return 0;
 }
@@ -138,6 +164,7 @@ int main(int argc, char const *argv[]) {
     int reader_fd = perf_reader_fd(reader);
     auto table = bpf.get_table("events");
 
+    // TODO: check why this is needed.
     bpf_update_elem(table.get_fd(), &i, &reader_fd, 0);
     readers.push_back(reader);
   }
@@ -150,8 +177,8 @@ int main(int argc, char const *argv[]) {
     perf_reader_poll(readers.size(), readers.data(), -1);
     curtime = time(NULL);
     if (curtime >= rawtime + 1) {
-      printf("count: %lu --- size: %lu --- lost: %lu --- Current local time and date: %s",
-             counter, total_bytes / counter, total_bytes_lost, asctime(localtime(&curtime)));
+      printf("count: %lu --- size: %lu --- %f --- lost: %lu --- time: %s",
+             counter, total_bytes / counter, (float)total_bytes/1000000, total_bytes_lost, asctime(localtime(&curtime)));
       rawtime = curtime;
       counter = 1;
       total_bytes = 0;
